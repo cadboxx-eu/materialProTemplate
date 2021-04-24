@@ -1,0 +1,281 @@
+<html>
+
+<head>
+    <title>A-Frame Super Hands Component - 6DOF With Physics</title>
+    <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script> 
+	<script src="https://unpkg.com/super-hands/dist/super-hands.min.js"></script>
+    <script src="https://cdn.rawgit.com/donmccurdy/aframe-physics-system/v3.1.2/dist/aframe-physics-system.min.js"></script>
+    <script src="https://unpkg.com/aframe-event-set-component@^4.1.1/dist/aframe-event-set-component.min.js"></script>
+    <script src="https://unpkg.com/aframe-physics-extras/dist/aframe-physics-extras.min.js"></script>
+    <script src="https://rawgit.com/feiss/aframe-environment-component/master/dist/aframe-environment-component.min.js"></script>
+	<script src="//cdn.rawgit.com/donmccurdy/aframe-extras/v5.1.0/dist/aframe-extras.min.js"></script>
+	<script src="https://unpkg.com/aframe-seek-position-component/dist/aframe-seek-position-component.min.js"></script> 
+	<script src="https://unpkg.com/aframe-geometry-merger-component/dist/aframe-geometry-merger-component.min.js"></script> 
+	<script src="https://unpkg.com/@editvr/aframe-dialog-popup-component@1.7.2/dist/aframe-dialog-popup-component.min.js"></script> 
+	<script src="//cdn.rawgit.com/donmccurdy/aframe-physics-system/v2.0.0/dist/aframe-physics-system.min.js"></script> 
+    <script src="https://rawgit.com/protyze/aframe-physics-lerp-component/master/dist/aframe-physics-lerp-component.min.js"></script> 
+	<script src="https://unpkg.com/aframe-event-set-component@^4.0.0/dist/aframe-event-set-component.min.js"></script>
+	<script src="https://rawgit.com/chenzlabs/auto-detect-controllers/master/dist/aframe-auto-detect-controllers-component.min.js"></script> 
+	<script type="text/javascript" src="https://rawgit.com/wmurphyrd/aframe-super-hands-component/master/dist/super-hands.js"></script>
+	<script type="text/javascript" src="aframe-pointcloud-component.js"></script><!-- ... -->
+	<script type="text/javascript" src="aframe-heightgrid-component.min.js"></script><!-- ... -->	
+	<script type="text/javascript" src="aframe-extras.misc.min.js"></script><!-- ... -->	
+	<script type="text/javascript" src="aframe-extras-controls.js"></script><!-- ... -->
+	<script type="text/javascript" src="aframe-extras-loaders.min.js"></script><!-- ... -->	
+	<script type="text/javascript" src="aframe-extras.min.js"></script><!-- ... -->	
+	<script type="text/javascript" src="aframe-spawnpoint-component.js"></script><!-- ... -->
+	<script type="text/javascript" src="super-hands.min.js"></script><!-- ... -->	
+	<script type="text/javascript" src="aframe-select-bar-component.js"></script><!-- ... -->	
+	<script type="text/javascript" src="aframe-intersection-spawn.js"></script><!-- ... -->
+	<script type="text/javascript" src="super-keyboard.js"></script><!-- ... -->	
+	<script type="text/javascript" src="gltf-spawner.js"></script><!-- ... -->
+    <script type="text/javascript" src="gltf-unitizer.js"></script><!-- ... -->	
+	<script type="text/javascript" src=".js"></script><!-- ... -->
+    <script type="text/javascript" src=".js"></script><!-- ... -->	
+	<script type="text/javascript" src=".js"></script><!-- ... -->
+    
+	
+	
+    <script src="https://unpkg.com/aframe-snapto-component/dist/aframe-snapto-component.js"></script>
+
+    <script src="reaction_components/clickable.js"></script>
+    <script src="reaction_components/draggable.js"></script>
+    <script src="reaction_components/drag-droppable.js"></script>
+    <script src="reaction_components/hoverable.js"></script>
+    <script src="reaction_components/stretchable.js"></script>
+    <script src="reaction_components/droppable.js"></script>
+    <script src="reaction_components/grabbable.js"></script>
+
+    <script src="components/ammo-constraints.js"></script>
+
+    <script>
+      // forward mouse and touch events to the super-hands entity
+      AFRAME.registerComponent('capture-mouse', {
+        init: function () {
+          this.eventRepeater = this.eventRepeater.bind(this)
+          this.el.sceneEl.addEventListener('loaded', () => {
+            this.el.sceneEl.canvas.addEventListener('mousedown', this.eventRepeater)
+            this.el.sceneEl.canvas.addEventListener('mouseup', this.eventRepeater)
+            this.el.sceneEl.canvas.addEventListener('touchstart', this.eventRepeater)
+            this.el.sceneEl.canvas.addEventListener('touchmove', this.eventRepeater)
+            this.el.sceneEl.canvas.addEventListener('touchend', this.eventRepeater)
+          }, {once: true})
+        },
+        eventRepeater: function (evt) {
+          if (evt.type.startsWith('touch')) {
+            evt.preventDefault()
+            // avoid repeating touchmove because it interferes with look-controls
+            if (evt.type === 'touchmove') { return }
+          }
+          this.el.emit(evt.type, evt.detail)
+        }
+      })
+    </script>
+    <link rel="stylesheet" type="text/css" href="aframe.css">
+</head>
+<body>
+	<a-scene inspector="url: https://cdn.jsdelivr.net/gh/aframevr/aframe-inspector@master/dist/aframe-inspector.min.js" gridhelper gltf-exporter >
+        <assets>
+            <img id="groundTexture" src="assets/floored.png">
+            
+            <a-asset-item id="g01" src="assets/models/gear16.glb"></a-asset-item>
+            <a-asset-item id="g02" src="assets/models/gear32.glb"></a-asset-item>
+            <a-asset-item id="g03" src="assets/models/gear48.glb"></a-asset-item>
+            <a-asset-item id="g04" src="axle.glb"></a-asset-item>
+            <a-asset-item id="g05" src="cradle.glb"></a-asset-item>
+            <a-asset-item id="g06" src="assets/models/sixboxx.glb"></a-asset-item>
+
+
+            <a-mixin id="cube" geometry="primitive: box;"
+                     hoverable grabbable stretchable draggable droppable
+                     event-set__hoveron="_event: hover-start; material.opacity: 0.7; transparent: true"
+                     event-set__hoveroff="_event: hover-end; material.opacity: 1; transparent: false"
+                     dynamic-body shadow mass="5.0"></a-mixin>
+			
+			<a-mixin id="g5" geometry="gltf-model: #g05;"
+                     hoverable grabbable stretchable draggable droppable
+                     event-set__hoveron="_event: hover-start; material.opacity: 0.7; transparent: true"
+                     event-set__hoveroff="_event: hover-end; material.opacity: 1; transparent: false"
+                     dynamic-body shadow "></a-mixin>
+			<a-mixin id="g4" geometry="gltf-model: #g04;"
+                     hoverable grabbable stretchable draggable droppable
+                     event-set__hoveron="_event: hover-start; material.opacity: 0.7; transparent: true"
+                     event-set__hoveroff="_event: hover-end; material.opacity: 1; transparent: false"
+                     dynamic-body shadow "></a-mixin>
+			
+            <a-asset-item id="cadboxx" src="assets/models/cadboxx.glb"></a-asset-item>
+            <a-asset-item id="cadboxxanim" src="assets/models/cadboxxanim.glb"></a-asset-item>
+            <a-mixin id="controller" super-hands="colliderEvent: collisions;
+                              colliderEventProperty: els;
+                              colliderEndEvent: collisions;
+                              colliderEndEventProperty: clearedEls;
+                              grabStartButtons: gripdown, pointdown, triggerdown;
+                              grabEndButtons: gripup, pointup, triggerup" static-body="shape: sphere; sphereRadius: 0.11" oculus-touch-controls="hand: left" physics-collider collision-filter="collidesWith: default, red, green, blue;
+                                     collisionForces: false"></a-mixin>
+
+
+        </assets>
+		<a-plane id="ground" src="#groundTexture" static-body position="0 0 -4" rotation="-90 0 0" width="100" height="100"></a-plane>
+        <a-sky></a-sky>
+        <!-- <a-sky id="sky2" src="#skyTexture2" theta-length="90" radius="50"></a-sky>
+
+		<!--plane, sky etc-->
+		  
+		<a-grid color="white" spacing="1.0"></a-grid>
+		<a-entity id="light" light="type:hemisphere; color: #f4f4f4; intensity: 0.5; "></a-entity>
+	   
+		<!--lights --
+		<a-entity light="type: point; color: #f4f4f4; intensity: 0.1; distance: 0" position="8 10 18"></a-entity>
+        <a-entity light="type: point; color: #f4f4f4; intensity: 0.2; distance: 0" position="-8 10 -18"></a-entity>
+        <a-entity light="type: ambient; color: #f4f4f4; intensity: 0.4;" position="-8 10 -18"></a-entity>
+      
+		<!-- If detected, will use built-in controller model (e.g. Oculus Touch or Vive) -->
+	    <a-entity id="lefthand" auto-detect-controllers="hand:left"></a-entity>
+	    <a-entity id="righthand" auto-detect-controllers="hand:right"></a-entity>
+	  
+		
+     <a-entity positiom="0 2 0">
+	 	
+	 </a-entity>       
+
+		<a-entity gltf-model="#g04" static-body="shape: box; mass: 2" position="0 6 0" rotation="0 0 -90" scale="10 10 10" grab></a-entity>
+        <a-entity gltf-model="#g05" mixin="g5" dynamic-body="shape: cylinder; mass: 2" position="0 15 -3" rotation="90 0 0" scale="10 10 10" grab></a-entity>
+        <a-entity gltf-model="#g06" mixin="g6" dynamic-body="shape: cylinder; mass: 2" position="0 15 3" rotation="90 0 0" scale="10 10 10" grab></a-entity>
+           
+	
+ 
+  <!--Property preserve original
+  <a-entity geometry-merger="preserveOriginal: false" material="color: #AAA">
+      <a-entity geometry="primitive: box; buffer: false" position="-1 0.5 -2"></a-entity>
+      <a-entity geometry="primitive: sphere; buffer: false" position="0 0.5 -2"></a-entity>
+      <a-entity geometry="primitive: cylinder; buffer: false" position="1 0.5 -2" scale="0.5 0.5 05"></a-entity>
+    </a-entity>
+	--
+    <a-entity dialog-popup="title: My Title; body: My Body"></a-entity>
+	<a-entity seek-position="0 1 34"></a-entity><!-- seek-position takes a vector3 world position as input -->
+
+        <!-- lerp-
+        
+   <a-scene physics="debug:true">
+        <a-assets></a-assets>
+        <a-box id="box1" dynamic-body material="color: #ff0000"></a-box>
+        <a-box id="box2" dynamic-body material="color: #0000ff" physics-lerp="...Properties..."></a-box>
+   </a-scene>
+
+        <!-- cadboxxes ZZZZ-->
+     <a-box id="cb1" static-body width="5" height="5" depth="5" color="brown" position="45 2.5 -45"></a-box>
+      <a-box id="cb2" static-body width="5" height="5" depth="5" color="brown" position="35 2.5 -45"></a-box>
+      <a-box id="cb3" static-body width="5" height="5" depth="5" color="brown" position="25 2.5 -45"></a-box>
+      <a-box id="cb4" static-body width="5" height="5" depth="5" color="brown" position="15 2.5 -45"></a-box>
+      <a-box id="cb5" static-body width="5" height="5" depth="5" color="brown" position="5 2.5 -45"></a-box>
+      <a-box id="cb6" static-body width="5" height="5" depth="5" color="brown" position="-5 2.5 -45"></a-box>
+      <a-box id="cb7" static-body width="5" height="5" depth="5" color="brown" position="-15 2.5 -45"></a-box>
+      <a-box id="cb8" static-body width="5" height="5" depth="5" color="brown" position="-25 2.5 -45"></a-box>
+      <a-box id="cb9" static-body width="5" height="5" depth="5" color="brown" position="-35 2.5 -45"></a-box>
+      <a-box id="cb10" static-body width="5" height="5" depth="5" color="brown" position="-45 2.5 -45"></a-box>
+      <a-box id="cb11" static-body width="5" height="5" depth="5" color="brown" position="-45 2.5 -35"></a-box>
+      <a-box id="cb12" static-body width="5" height="5" depth="5" color="brown" position="-45 2.5 -45"></a-box>
+      <a-box id="cb13" static-body width="5" height="5" depth="5" color="brown" position="-45 2.5 -25"></a-box>
+      <a-box id="cb14" static-body width="5" height="5" depth="5" color="brown" position="-45 2.5 -15"></a-box>
+      <a-box id="cb15" static-body width="5" height="5" depth="5" color="brown" position="-45 2.5 -5"></a-box>
+      <a-box id="cb16" static-body width="5" height="5" depth="5" color="brown" position="-45 2.5 5"></a-box>
+      <a-box id="cb17" static-body width="5" height="5" depth="5" color="brown" position="-45 2.5 15"></a-box>
+      <a-box id="cb18" static-body width="5" height="5" depth="5" color="brown" position="-45 2.5 25"></a-box>
+      <a-box id="cb19" static-body width="5" height="5" depth="5" color="brown" position="-45 2.5 -45"></a-box>
+
+
+    <!-- HINGE PIN box--WORKS--
+        <a-entity position="0 8 -5" rotation="-90 0 0">
+
+            <a-cylinder id="hinge3-target" position="0 -0.5 0 " color="#777" static-body radius="0.5" length="0.1"></a-cylinder>
+            
+            <a-entity class="cube" mixin="cube" position="0 0.5 0" material="color: yellow"
+                      constraint="type: hinge;
+                           target: #hinge3-target;
+                           axis: 0 1 0;
+                           targetAxis: 0 1 0;
+                           pivot: 0 0 0;
+                           targetPivot: 0 0 0;"></a-entity>
+
+        </a-entity>
+
+        <!---->
+        <!-- -->
+        <!---->
+        <!-- --
+            <a-entity gltf-model="#g06" static-body="shape: box; mass: 2" position="-5 5 0" rotation="90 0 0" scale="10 10 10" grab>
+                    <a-animation attribute="rotation" from="0 0 0" to="3600 0 0" repeat="indefinite" dur="55000" easing="linear"></a-animation>
+            </a-entity>
+
+            <a-entity gltf-model="#g05" dynamic-body="shape: box; mass: 2" position="-5 5.5 0" rotation="90 0 0" scale="10 10 10" grab>
+                     </a-entity>
+			--next2
+			<a-entity gltf-model="#g07" static-body="shape: box; mass: 2" position="-5 5.5 0" rotation="90 0 0" scale="0.01 0.01 0.01" grab>
+                     </a-entity>
+			<a-entity gltf-model="#g07" dynamic-body="shape: box; mass: 2" position="-5 5.5 -5" rotation="90 0 0" mixin="holder" grab>
+                     </a-entity>
+			<!--  -->
+        <!-- POINT TO POINT -->
+      <a-entity position="4 0 -1">
+          <a-text value="Point to Point" position="0 1.5 0" align="center"></a-text>
+          <a-box id="pointtopoint-target"
+                 color="#777"
+                 position="0 2 0"
+                 scale="0.25 0.25 0.25"
+                 static-body>
+          </a-box>
+          <a-box color="#F00"
+                 position="0 0.875 0"
+                 scale="0.25 0.25 0.25"
+                 dynamic-body
+                 constraint="type: pointToPoint;
+                       target: #pointtopoint-target;
+                       pivot: 0 -0.125 0;
+                       targetPivot: 0 -0.125 0">
+          </a-box>
+      </a-entity>
+        
+		<!-- Camera + cursor. -->
+				<a-entity id="cameraRig" position="0 1.6 0">
+				
+					<a-camera look-controls wasd-controls position="0 0 0"
+	                  capture-mouse orbit-controls hand-controls
+	                  raycaster cursor="rayOrigin:mouse"
+	                  static-body="shape: sphere; sphereRadius: 0.001"
+	                  super-hands="colliderEvent: raycaster-intersection;
+	                             colliderEventProperty: els;
+	                             colliderEndEvent:raycaster-intersection-cleared;
+	                             colliderEndEventProperty: clearedEls;">
+						
+							<a-gui-cursor id="cursor"
+									  raycaster="objects: [gui-interactable]"
+									  fuse="true" fuse-timeout="2000"
+									  design="ring"
+							>
+						</a-gui-cursor> <!-- /cursor -->
+					</a-camera> <!-- /camera -->
+				</a-entity>
+		        
+          <a-entity class="cube" mixin="cube" position="-1 8.95 -1.5" material="color: cyan"></a-entity>
+      <a-entity class="cube" mixin="cube" position="-1 8.95 -0.5" material="color: cyan"></a-entity>
+      <a-entity class="cube" mixin="cube" position="1 8.95 -1.5" material="color: orange"></a-entity>
+      <a-entity class="cube" mixin="cube" position="1 8.95 -0.5" material="color: orange"></a-entity>
+	  
+      <a-entity class="cube" mixin="cube" position="0 10.95 -1.5" material="color: red"></a-entity>
+      <a-entity class="cube" mixin="cube" position="0 10.95 -0.5" material="color: red"></a-entity>
+      <a-entity class="cube" mixin="cube" position="-1 10.95 -1.5" material="color: blue"></a-entity>
+      <a-entity class="cube" mixin="cube" position="-1 10.95 -0.5" material="color: blue"></a-entity>
+      <a-entity class="cube" mixin="cube" position="1 10.95 -1.5" material="color: green"></a-entity>
+      <a-entity class="cube" mixin="cube" position="1 10.95 -0.5" material="color: green"></a-entity>
+      <!-- ground collider keeps objets from falling -->
+      <a-box static-body width=1000 height=0.001 depth=1000 visible="false"></a-box>
+    </a-scene>
+
+</body>
+</html>
+
+			
+
+        
+
+        
